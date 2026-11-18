@@ -17,6 +17,7 @@ Use AskUserQuestion (one round, all questions together) for anything below that 
 2. **B-roll checklist page.** Ask explicitly whether this pack needs a B-roll checklist page (unboxing, before/after, product close-ups). Do NOT add one unless the user approves. If approved, add it via `extra_pages` (one row per shot: label = shot name, value = what to film and for how long) and make the Product Shots row point to it.
 3. **Brand website / product link** for the Additional Resource section, if it isn't in the doc. You may look it up on the web, but confirm the URL with the user if you're not certain.
 4. **Deliverable length** only if the doc implies something other than the default ("1 Raw UGC Video (Up to 60 seconds)").
+5. **Who drafts the copy:** ChatGPT through their browser, or Claude. See "Writing the copy" below.
 
 Brand and product usually come from the script itself. The product name in the script is often a model name of a brand (e.g. "Gordon" is a towel rail by Eskimo), so check before filling Brand vs Product.
 
@@ -51,6 +52,34 @@ Split each script into numbered scenes (Scene 1, 2, 3… with no gaps in numberi
 **Props**: a short bullet list of what the creator must have on set, including script-specific items (e.g. "skincare bottle (for Hook 3)").
 
 **Product Shots**: describe 3–4 short extra clips (5 seconds each) of the product, unless a B-roll page was approved (then point to it).
+
+## Writing the copy: ChatGPT + SlopMonster + Fluent Prose
+
+This covers every piece of text TRAOH writes for the pack: Tone, Objective, Location, Props, Framing, Product shots, scene names and notes, Visual directions, the framing rows and the product-specific "Before you shoot" bullets. It never touches the creator's lines, which stay exactly as the client wrote them.
+
+**1. Pick who drafts.** Check which browser tools this session has:
+- The Cowork built-in browser (tools named `Claude_Browser`): ask the user to press **Cmd+Shift+B** (Ctrl+Shift+B on Windows) to open the browser pane in the Claude desktop app and sign in to chatgpt.com there.
+- The Claude in Chrome extension (tools named `claude-in-chrome`): ask the user to sign in to chatgpt.com in that Chrome.
+- Ask this together with the other questions above, and say once that the client's script will be sent to their ChatGPT account. The user signs in themselves; never type a password. Wait until they confirm they're signed in.
+- If neither browser exists, or the user can't or doesn't want to sign in, skip ChatGPT and let Claude write the draft. Don't ask again.
+
+**2. Draft.** With ChatGPT: open chatgpt.com in a new tab, start a new chat, paste the prompt below with the script and product details, wait for the full answer, then read it with the page-text tool. If ChatGPT fails twice (not signed in, error, limit reached), fall back to Claude. Without ChatGPT, Claude writes the same draft itself.
+
+```text
+You're writing the production notes for a TRAOH UGC script pack. A creator will film one vertical video on their phone, alone, from these notes. Brand: {brand}. Product: {product}. Script (client-approved, do not change a word of it):
+{script}
+
+Return JSON only, with these keys: tone (one line), objective (one or two sentences), location, props (list), framing, product_shots, scenes (list of {name, note, visuals: one direction per line or hook}), framing_rows (list of {scene, angle, purpose}, one per scene), prep_bullets (one or two product-specific prep tips).
+
+Rules: write plain, specific directions a creator can shoot (camera height and position, what's in frame, what their hands do, and when). No em dashes. No hype words (seamless, elevate, unlock, game-changing and the like). Don't invent product claims, numbers or results. Don't repeat or rewrite the script lines.
+```
+
+**3. De-slop, every time.** Load the `slopmonster` and `fluent-prose` skills with the Skill tool. If they aren't installed, download the copies packaged with this skill and read them before editing:
+`mkdir -p ~/script-pack && curl -fsSL https://raw.githubusercontent.com/Atheeb00158U/traoh-make-script-pack-skill/main/slopmonster/SKILL.md -o ~/script-pack/slopmonster.md` (and the same for `fluent-prose/SKILL.md`).
+- Put all the TRAOH-written copy in one markdown file, one field per paragraph or bullet, and run SlopMonster's checker (`deslop.py`) on it. Leave the creator's lines out of the file.
+- Edit with SlopMonster steps 2 and 4. Apply Fluent Prose to the longer prose fields (Objective, Framing, Visual directions) so they read as connected sentences; short labels and prop lists stay as short lists.
+- The second pass (SlopMonster step 3) must come from a different model family from the drafter. If ChatGPT drafted, Claude's edit is that second pass. If Claude drafted and ChatGPT is available, send SlopMonster's cleanse prompt plus the copy to ChatGPT and check its changes before accepting them.
+- Re-run the checker until it scores 5/5, or note any finding you kept on purpose. Then fill pack.json and build.
 
 ### Standard copy (use as-is unless the user asks to change it)
 
@@ -87,12 +116,13 @@ The builder below implements all of this. Don't hand-build the PDF.
 ## How to build
 
 1. Read the script doc (`pandoc -t plain file.docx`) and split it into scripts.
-2. Ask the questions above.
-3. Run the setup block once per session (writes the builder, logo and silhouettes to `~/script-pack/` and fetches the fonts from npm).
-4. For each script, write `packN.json` (schema below), then run:
+2. Ask the questions above, including who drafts the copy (ChatGPT or Claude).
+3. Write the copy with the ChatGPT + SlopMonster + Fluent Prose steps above.
+4. Run the setup block once per session (writes the builder, logo and silhouettes to `~/script-pack/` and fetches the fonts from npm).
+5. For each script, write `packN.json` (schema below), then run:
    `python3 ~/script-pack/build_panels.py packN.json "out/{Creator} - Script Pack {N} - {Brand}.pdf" --assets ~/script-pack --png-preview out/previewN`
-5. Look at every preview PNG yourself (Read tool). Check: nothing overlaps the bottom watermark, framing rows match the script scenes, creator lines are verbatim (apart from em dashes), no empty fields, scene numbers have no gaps, no big empty areas. If the builder logs `OVERFLOW`, shorten the dynamic text on that page (never the creator lines).
-6. Deliver the PDFs with SendUserFile (PDF only, no PNGs unless asked). If a folder is connected, also save them there.
+6. Look at every preview PNG yourself (Read tool). Check: nothing overlaps the bottom watermark, framing rows match the script scenes, creator lines are verbatim (apart from em dashes), no empty fields, scene numbers have no gaps, no big empty areas. If the builder logs `OVERFLOW`, shorten the dynamic text on that page (never the creator lines).
+7. Deliver the PDFs with SendUserFile (PDF only, no PNGs unless asked). If a folder is connected, also save them there.
 
 ### pack.json schema
 
